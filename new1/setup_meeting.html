@@ -9,27 +9,72 @@
       max-width: 600px;
       margin: 40px auto;
     }
+
     label {
       display: block;
       margin-top: 20px;
       font-weight: bold;
     }
-    input, button {
+
+    input, button, select {
       padding: 8px;
       font-size: 16px;
       margin-top: 5px;
       width: 100%;
     }
+
     button {
       background-color: black;
       color: white;
       margin-top: 30px;
       cursor: pointer;
     }
+
+    .weekday-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .weekday {
+      flex: 1 1 calc(14.2% - 8px);
+      min-width: 40px;
+      padding: 8px;
+      text-align: center;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      background-color: #e0e0e0;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .weekday.active {
+      background-color: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+
+    p.centered {
+      text-align: center;
+      margin-top: 30px;
+    }
+
+    a.link {
+      text-decoration: underline;
+      color: #007bff;
+    }
   </style>
 </head>
 <body>
-  <h1 id="meetingTitle">Impostazioni per meeting: ...</h1>
+  <h1>Impostazioni calendario</h1>
+
+  <label for="meetingName">Nome del meeting:</label>
+  <input type="text" id="meetingName" placeholder="es. team-weekly" />
+
+  <label for="username">Il tuo nome utente:</label>
+  <input type="text" id="username" placeholder="es. andrea" />
 
   <label for="startHour">Ora inizio giornata:</label>
   <input type="time" id="startHour" value="09:00" />
@@ -40,12 +85,27 @@
   <label for="minSlot">Durata minima disponibilità (minuti):</label>
   <input type="number" id="minSlot" value="30" min="5" />
 
+  <label>Giorni della settimana inclusi:</label>
+  <div id="weekday-buttons" class="weekday-buttons">
+    <button type="button" data-day="0" class="weekday active">Dom</button>
+    <button type="button" data-day="1" class="weekday active">Lun</button>
+    <button type="button" data-day="2" class="weekday active">Mar</button>
+    <button type="button" data-day="3" class="weekday active">Mer</button>
+    <button type="button" data-day="4" class="weekday active">Gio</button>
+    <button type="button" data-day="5" class="weekday active">Ven</button>
+    <button type="button" data-day="6" class="weekday active">Sab</button>
+  </div>
+
+  <label for="startDate">Data inizio calendario:</label>
+  <input type="date" id="startDate" />
+
+  <label for="endDate">Data fine calendario:</label>
+  <input type="date" id="endDate" />
+
   <button onclick="saveSettings()">Salva impostazioni e vai al calendario</button>
 
-  <p style="text-align: center; margin-top: 30px;">
-    <a href="index.html" style="text-decoration: underline; color: #007bff;">
-      🔁 Vedi altri meeting
-    </a>
+  <p class="centered">
+    <a href="index.html" class="link">🔁 Vedi altri meeting</a>
   </p>
 
   <!-- Firebase -->
@@ -62,19 +122,63 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const meetingName = localStorage.getItem("meetingName");
-    if (!meetingName) {
-      alert("Nessun meeting trovato. Torna alla home.");
-      window.location.href = "index.html";
-    } else {
-      document.getElementById("meetingTitle").textContent = `Impostazioni per meeting: ${meetingName}`;
-    }
+    // Pre-fill if stored
+    const storedMeetingName = localStorage.getItem("meetingName");
+    const storedUsername = localStorage.getItem("username");
+    if (storedMeetingName) document.getElementById("meetingName").value = storedMeetingName;
+    if (storedUsername) document.getElementById("username").value = storedUsername;
+
+    // Default date values
+    const today = new Date().toISOString().split('T')[0];
+    const nextWeek = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    document.getElementById("startDate").value = today;
+    document.getElementById("endDate").value = nextWeek;
+
+    // Toggle weekday buttons
+    document.querySelectorAll(".weekday").forEach(button => {
+      button.addEventListener("click", () => {
+        button.classList.toggle("active");
+      });
+    });
 
     function saveSettings() {
+      const meetingName = document.getElementById("meetingName").value.trim();
+      const username = document.getElementById("username").value.trim();
+      const startHour = document.getElementById("startHour").value;
+      const endHour = document.getElementById("endHour").value;
+      const minSlot = parseInt(document.getElementById("minSlot").value);
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+
+      const weekdays = Array.from(document.querySelectorAll(".weekday.active"))
+        .map(btn => parseInt(btn.dataset.day));
+
+      if (!meetingName || !username) {
+        alert("Inserisci nome del meeting e nome utente.");
+        return;
+      }
+
+      if (weekdays.length === 0) {
+        alert("Seleziona almeno un giorno della settimana.");
+        return;
+      }
+
+      if (new Date(startDate) > new Date(endDate)) {
+        alert("La data di inizio deve essere precedente alla data di fine.");
+        return;
+      }
+
+      // Save to localStorage
+      localStorage.setItem("meetingName", meetingName);
+      localStorage.setItem("username", username);
+
       const settings = {
-        startHour: document.getElementById("startHour").value,
-        endHour: document.getElementById("endHour").value,
-        minSlot: parseInt(document.getElementById("minSlot").value)
+        startHour,
+        endHour,
+        minSlot,
+        weekdays,
+        startDate,
+        endDate
       };
 
       db.ref(`settings/${meetingName}`).set(settings)

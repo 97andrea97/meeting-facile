@@ -7,13 +7,24 @@
   <style>
     body {
       display: flex;
+      flex-direction: column;
       margin: 0;
       font-family: sans-serif;
+      height: 100vh;
     }
+
+    #main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
     #calendar {
       flex: 3;
       padding: 20px;
+      height: 100%;
     }
+
     #sidebar {
       flex: 1;
       padding: 20px;
@@ -21,8 +32,9 @@
       border-left: 2px solid #ccc;
       max-width: 350px;
       overflow-y: auto;
-      height: 100vh;
+      height: 100%;
     }
+
     .slot {
       background-color: #cce5ff;
       margin-bottom: 8px;
@@ -30,59 +42,98 @@
       border-radius: 5px;
       font-size: 14px;
     }
+
     .common-slot {
       background-color: #b9fbc0;
       font-weight: bold;
     }
+
     .other-user-slot {
       background-color: #fce5cd;
     }
-    #saveBtn {
+
+    #controls {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      padding: 20px;
+      border-top: 2px solid #ccc;
+      background-color: #f0f0f0;
+    }
+
+    #controls button {
       background: black;
       color: white;
       font-size: 16px;
-      padding: 12px;
-      width: 100%;
+      padding: 12px 20px;
       border: none;
-      margin-top: 20px;
       cursor: pointer;
     }
-    #user-legend div {
-      font-size: 14px;
+
+    #changeBtn {
+      background-color: gray;
+    }
+
+    #settingsBtn {
+      background-color: #007bff;
+    }
+
+    #user-info {
+      margin-bottom: 30px;
+    }
+
+    #user-info h2 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    #user-info p {
+      margin: 4px 0;
+      font-size: 18px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <div id="calendar"></div>
-  <div id="sidebar">
-    <h2>Riepilogo</h2>
 
-    <div id="common-availability">
-      <h3>Disponibilità comune</h3>
-      <button id="refreshCommonBtn"
-        onclick="updateSummaries()"
-        style="margin-bottom: 10px; padding: 6px 12px; font-size: 14px;">
-        🔄 Aggiorna disponibilità comune
-      </button>
-      <div id="common-summary"></div>
+  <div id="main">
+    <div id="calendar"></div>
+
+    <div id="sidebar">
+      <div id="user-info">
+        <h2>📅 Calendario</h2>
+        <p>Meeting: <span id="meetingNameDisplay">...</span></p>
+        <p>Utente: <span id="usernameDisplay">...</span></p>
+      </div>
+
+      <h2>Riepilogo</h2>
+
+      <div id="common-availability">
+        <h3>Disponibilità comune utenti selezionati</h3>
+        <button id="refreshCommonBtn"
+          onclick="updateSummaries()"
+          style="margin-bottom: 10px; padding: 6px 12px; font-size: 14px;">
+          🔄 Aggiorna disponibilità comune
+        </button>
+        <div id="common-summary"></div>
+      </div>
+
+      <hr>
+
+      <h3>Le tue disponibilità</h3>
+      <div id="personal-summary"></div>
+
+      <hr>
+
+      <div id="all-users-summary"></div>
     </div>
+  </div>
 
-    <hr>
-
-    <h3>Le tue disponibilità</h3>
-    <div id="personal-summary"></div>
-
-    <hr>
-
-    <div id="all-users-summary"></div>
-
-    <hr style="margin-top: 30px;">
-    <div id="user-legend"></div>
-
-    <button id="saveBtn">Salva disponibilità</button>
-    <button id="changeBtn" style="background-color: gray; margin-top: 10px;">
-      🔁 Cambia nome o meeting
-    </button>
+  <!-- 👇 Bottoni sotto il calendario -->
+  <div id="controls">
+    <button id="saveBtn">💾 Salva disponibilità</button>
+    <button id="changeBtn">🔁 Cambia utente o meeting</button>
+    <button id="settingsBtn">⚙️ Impostazioni meeting</button>
   </div>
 
   <!-- Firebase & FullCalendar -->
@@ -94,5 +145,38 @@
   <script src="calendario_js/firebase-config.js"></script>
   <script src="calendario_js/user-session.js"></script>
   <script src="calendario_js/calendario-main.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const meetingName = localStorage.getItem("meetingName");
+      const username = localStorage.getItem("username");
+
+      if (!meetingName || !username) {
+        alert("Meeting o utente non trovato.");
+        window.location.href = "index.html";
+        return;
+      }
+
+      document.getElementById("meetingNameDisplay").textContent = meetingName;
+      document.getElementById("usernameDisplay").textContent = username;
+
+      document.getElementById("changeBtn").addEventListener("click", () => {
+        localStorage.removeItem("meetingName");
+        localStorage.removeItem("username");
+        window.location.href = "index.html";
+      });
+
+      document.getElementById("settingsBtn").addEventListener("click", () => {
+        window.location.href = "setup_meeting.html";
+      });
+
+      const syncBtn = document.getElementById("syncBtn");
+      if (syncBtn) {
+        syncBtn.addEventListener("click", () => {
+          updateSummaries();
+        });
+      }
+    });
+  </script>
 </body>
 </html>
