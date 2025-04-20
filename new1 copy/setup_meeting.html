@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Configura Meeting</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+    }
+    label {
+      display: block;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    input, button {
+      padding: 8px;
+      font-size: 16px;
+      margin-top: 5px;
+      width: 100%;
+    }
+    button {
+      background-color: black;
+      color: white;
+      margin-top: 30px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="meetingTitle">Impostazioni per meeting: ...</h1>
+
+  <label for="startHour">Ora inizio giornata:</label>
+  <input type="time" id="startHour" value="09:00" />
+
+  <label for="endHour">Ora fine giornata:</label>
+  <input type="time" id="endHour" value="18:00" />
+
+  <label for="minSlot">Durata minima disponibilità (minuti):</label>
+  <input type="number" id="minSlot" value="30" min="5" />
+
+  <button onclick="saveSettings()">Salva impostazioni e vai al calendario</button>
+
+  <p style="text-align: center; margin-top: 30px;">
+    <a href="index.html" style="text-decoration: underline; color: #007bff;">
+      🔁 Vedi altri meeting
+    </a>
+  </p>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMQojwmEfchDlP1Bv0PpIXRTK0V7NZZU",
+      authDomain: "meeting-felice.firebaseapp.com",
+      databaseURL: "https://meeting-felice-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "meeting-felice",
+      storageBucket: "meeting-felice.appspot.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const meetingName = localStorage.getItem("meetingName");
+    if (!meetingName) {
+      alert("Nessun meeting trovato. Torna alla home.");
+      window.location.href = "index.html";
+    } else {
+      document.getElementById("meetingTitle").textContent = `Impostazioni per meeting: ${meetingName}`;
+    }
+
+    function saveSettings() {
+      const settings = {
+        startHour: document.getElementById("startHour").value,
+        endHour: document.getElementById("endHour").value,
+        minSlot: parseInt(document.getElementById("minSlot").value)
+      };
+
+      db.ref(`settings/${meetingName}`).set(settings)
+        .then(() => {
+          console.log("Impostazioni salvate con successo.");
+          window.location.href = "calendario.html";
+        })
+        .catch((error) => {
+          console.error("Errore durante il salvataggio:", error);
+          alert("Errore durante il salvataggio delle impostazioni.");
+        });
+    }
+  </script>
+</body>
+</html>

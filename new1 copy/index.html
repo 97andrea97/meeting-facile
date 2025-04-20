@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Meeting Facile – Inizia</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding-top: 100px;
+    }
+    input, button {
+      font-size: 18px;
+      padding: 10px;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+    <h1>Benvenuto su <em>Meeting Facile</em></h1>
+  
+    <p>Inserisci il nome del meeting:</p>
+    <input type="text" id="meetingName" placeholder="es. progetto-esame" />
+  
+    <p>Inserisci il tuo nome o nickname:</p>
+    <input type="text" id="username" placeholder="es. luca" />
+  
+    <br>
+    <button onclick="checkMeeting()">Continua</button>
+  
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyCMQojwmEfchDlP1Bv0PpIXRTK0V7NZZU",
+        authDomain: "meeting-felice.firebaseapp.com",
+        databaseURL: "https://meeting-felice-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "meeting-felice",
+        storageBucket: "meeting-felice.appspot.com"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+  
+      function checkMeeting() {
+        const meeting = document.getElementById("meetingName").value.trim();
+        const username = document.getElementById("username").value.trim();
+  
+        if (!meeting || !username) {
+          alert("Inserisci sia il nome del meeting che il tuo nickname.");
+          return;
+        }
+  
+        localStorage.setItem("meetingName", meeting);
+        localStorage.setItem("username", username);
+  
+        db.ref(`availability/${meeting}`).once('value', snapshot => {
+          if (snapshot.exists()) {
+            window.location.href = "calendario.html";
+          } else {
+            window.location.href = "setup_meeting.html";
+          }
+        });
+      }
+    </script>
+  </body>  
+</html>

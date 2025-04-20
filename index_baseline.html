@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <title>meeting-facile</title>
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+
+    .layout {
+      display: flex;
+      flex-direction: row;
+      gap: 40px;
+      align-items: flex-start;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    #calendar {
+      flex: 2;
+      min-width: 700px;
+      max-width: 1000px;
+    }
+
+    #sidebar {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    #sidebar h3 {
+      margin-bottom: 10px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .legend-color {
+      width: 18px;
+      height: 18px;
+      margin-right: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+
+    #submit-btn {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    #name-input {
+      font-size: 16px;
+      padding: 8px;
+      width: 100%;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      #calendar {
+        max-width: 100%;
+      }
+
+      #name-input {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center;">Seleziona la tua disponibilità</h1>
+
+  <div class="layout">
+    <div id="calendar"></div>
+
+    <div id="sidebar">
+      <input type="text" id="name-input" placeholder="Il tuo nome" />
+    
+      <label>Data di inizio:</label>
+      <input type="date" id="start-date" /><br><br>
+    
+      <label>Data di fine:</label>
+      <input type="date" id="end-date" /><br><br>
+    
+      <button id="submit-btn">Invia disponibilità</button>
+    
+      <h3>Legenda:</h3>
+      <div id="legend">
+        <!-- Filled dynamically -->
+      </div>
+    </div>
+    
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const calendarEl = document.getElementById('calendar');
+      const submitBtn = document.getElementById('submit-btn');
+      const nameInput = document.getElementById('name-input');
+      const legendEl = document.getElementById('legend');
+      const startDateInput = document.getElementById('start-date');
+      const endDateInput = document.getElementById('end-date');
+      const usedNames = new Set();
+  
+      function getColorForName(name) {
+        const colors = ['#FFB347', '#87CEFA', '#90EE90', '#FFD700', '#FF69B4', '#BA55D3', '#00CED1', '#FFA07A'];
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+          hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return colors[Math.abs(hash % colors.length)];
+      }
+  
+      function addToLegend(name) {
+        if (usedNames.has(name)) return;
+        usedNames.add(name);
+        const color = getColorForName(name);
+        const item = document.createElement('div');
+        item.className = 'legend-item';
+        const colorBox = document.createElement('div');
+        colorBox.className = 'legend-color';
+        colorBox.style.backgroundColor = color;
+        const label = document.createElement('span');
+        label.textContent = name;
+        item.appendChild(colorBox);
+        item.appendChild(label);
+        legendEl.appendChild(item);
+      }
+  
+      // Default values
+      const today = new Date();
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      startDateInput.value = monday.toISOString().split('T')[0];
+      endDateInput.value = sunday.toISOString().split('T')[0];
+  
+      let calendar;
+  
+      function loadEvents() {
+        fetch('https://sheetdb.io/api/v1/a1agzsoepdzsr')
+          .then(res => res.json())
+          .then(data => {
+            usedNames.clear();
+            legendEl.innerHTML = '';
+            calendar.removeAllEvents();
+            data.forEach(entry => {
+              const start = new Date(entry.start);
+              const end = new Date(entry.end);
+              const rangeStart = new Date(startDateInput.value);
+              const rangeEnd = new Date(endDateInput.value);
+              if (start >= rangeStart && end <= rangeEnd) {
+                calendar.addEvent({
+                  title: entry.name,
+                  start: entry.start,
+                  end: entry.end,
+                  backgroundColor: getColorForName(entry.name),
+                  borderColor: getColorForName(entry.name),
+                  editable: false
+                });
+                addToLegend(entry.name);
+              }
+            });
+          });
+      }
+  
+      function initCalendar() {
+        const start = startDateInput.value;
+        const end = endDateInput.value;
+  
+        if (calendar) calendar.destroy();
+  
+        calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'timeGridWeek',
+          allDaySlot: false,
+          slotMinTime: "09:00:00",
+          slotMaxTime: "18:00:00",
+          selectable: true,
+          editable: true,
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: ''
+          },
+          locale: 'it',
+          firstDay: 1,
+          nowIndicator: true,
+          validRange: {
+            start: start,
+            end: end
+          },
+          initialDate: start,
+          select: function (info) {
+            const name = nameInput.value.trim();
+            if (!name) {
+              alert("Per favore, inserisci il tuo nome prima di selezionare.");
+              return;
+            }
+            calendar.addEvent({
+              title: name,
+              start: info.start,
+              end: info.end,
+              backgroundColor: getColorForName(name),
+              borderColor: getColorForName(name),
+              editable: true
+            });
+            addToLegend(name);
+          }
+        });
+  
+        calendar.render();
+        loadEvents();
+      }
+  
+      submitBtn.addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        if (!name) return alert("Inserisci il tuo nome");
+        const events = calendar.getEvents().filter(e => e.title === name);
+        if (events.length === 0) return alert("Nessuna disponibilità selezionata");
+  
+        const data = events.map(e => ({
+          name: name,
+          start: e.start.toISOString(),
+          end: e.end.toISOString()
+        }));
+  
+        fetch('https://sheetdb.io/api/v1/a1agzsoepdzsr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: data })
+        }).then(res => {
+          if (res.ok) {
+            alert("Disponibilità inviata!");
+            calendar.removeAllEvents();
+            loadEvents();
+            nameInput.value = '';
+          } else {
+            alert("Errore durante l'invio");
+          }
+        }).catch(err => alert("Errore rete: " + err));
+      });
+  
+      startDateInput.addEventListener('change', initCalendar);
+      endDateInput.addEventListener('change', initCalendar);
+  
+      initCalendar(); // first run
+    });
+  </script>
+  

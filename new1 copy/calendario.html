@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Calendario - Meeting Facile</title>
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+  <style>
+    body {
+      display: flex;
+      margin: 0;
+      font-family: sans-serif;
+    }
+    #calendar {
+      flex: 3;
+      padding: 20px;
+    }
+    #sidebar {
+      flex: 1;
+      padding: 20px;
+      background-color: #f9f9f9;
+      border-left: 2px solid #ccc;
+      max-width: 350px;
+    }
+    .slot {
+      background-color: #cce5ff;
+      margin-bottom: 8px;
+      padding: 6px;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .common-slot {
+      background-color: #b9fbc0;
+      font-weight: bold;
+    }
+    .other-user-slot {
+      background-color: #fce5cd;
+    }
+    #saveBtn {
+      background: black;
+      color: white;
+      font-size: 16px;
+      padding: 12px;
+      width: 100%;
+      border: none;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="calendar"></div>
+  <div id="sidebar">
+    <h2>Riepilogo</h2>
+    <div id="common-availability">
+      <h3>Disponibilità comune</h3>
+      <div id="common-summary"></div>
+    </div>
+    <hr>
+    <h3>Le tue disponibilità</h3>
+    <div id="personal-summary"></div>
+    <button id="saveBtn">Salva disponibilità</button>
+    <hr style="margin-top: 30px;">
+    <button id="changeBtn" style="background-color: gray; margin-top: 10px;">
+      🔁 Cambia nome o meeting
+    </button>
+  </div>
+
+  <!-- Firebase & FullCalendar -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
+  <!-- Script separati -->
+  <script src="calendario_js/firebase-config.js"></script>
+  <script src="calendario_js/user-session.js"></script>
+  <script src="calendario_js/calendario-main.js"></script>
+</body>
+</html>

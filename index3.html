@@ -1,0 +1,175 @@
+<!-- === PAGINE === -->
+<!-- === PAGINA 1 === -->
+<div id="page1" class="page active">
+    <h2>Ingresso</h2>
+    <input id="meeting-name" placeholder="Nome riunione">
+    <input id="user-name" placeholder="Il tuo nome">
+    <button onclick="startMeeting()">Continua</button>
+  </div>
+  
+  <!-- === PAGINA 2 === -->
+  <div id="page2" class="page">
+    <h2>Configurazione meeting</h2>
+    <label>Time zone</label>
+    <select id="timezone"></select>
+    <label>Data inizio</label>
+    <input type="date" id="start-date">
+    <label>Data fine</label>
+    <input type="date" id="end-date">
+    <label>Giorni della settimana</label>
+    <div>
+      <label><input type="checkbox" value="0"> Dom</label>
+      <label><input type="checkbox" value="1"> Lun</label>
+      <label><input type="checkbox" value="2"> Mar</label>
+      <label><input type="checkbox" value="3"> Mer</label>
+      <label><input type="checkbox" value="4"> Gio</label>
+      <label><input type="checkbox" value="5"> Ven</label>
+      <label><input type="checkbox" value="6"> Sab</label>
+    </div>
+    <label>Orario</label>
+    <input type="time" id="start-hour" value="08:00">
+    <input type="time" id="end-hour" value="20:00">
+    <label>Step (minuti)</label>
+    <input type="number" id="slot-step" value="30">
+    <button onclick="goToPage(1)">Torna indietro</button>
+    <button onclick="saveConfigAndGoToCalendar()">Cambia impostazioni</button>
+  </div>
+  
+  <!-- === PAGINA 3 === -->
+  <div id="page3" class="page">
+    <h2>Calendario</h2>
+    <button onclick="saveUserAvailability()">Salva disponibilità</button>
+    <div id="calendar"></div>
+    <div id="legend"></div>
+    <div id="summary"></div>
+    <div id="meeting-details"></div>
+    <button onclick="goToPage(2)">Cambia impostazioni meeting</button>
+  </div>
+  
+  <style>
+    .page { display: none; }
+    .page.active { display: block; }
+  </style>
+  
+  <!-- === SCRIPT === -->
+  <script>
+  // === SCRIPT COMPLETO ===
+  const firebaseConfig = {
+    apiKey: "AIzaSyCMQojwmEfchDlP1Bv0PpIXRTK0V7NZZU",
+    authDomain: "meeting-felice.firebaseapp.com",
+    databaseURL: "https://meeting-felice-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "meeting-felice",
+    storageBucket: "meeting-felice.appspot.com"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  
+  let meetingName = "";
+  let userName = "";
+  let userColor = "#007bff";
+  let calendar;
+  
+  const goToPage = (n) => {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(`page${n}`).classList.add('active');
+  };
+  
+  async function startMeeting() {
+    meetingName = document.getElementById('meeting-name').value.trim();
+    userName = document.getElementById('user-name').value.trim();
+    if (!meetingName || !userName) return alert("Inserisci tutti i campi");
+    const snapshot = await db.ref(`meetings/${meetingName}/config`).once('value');
+    if (snapshot.exists()) {
+      const config = snapshot.val();
+      goToPage(3);
+      requestAnimationFrame(() => renderCalendar(config));
+    } else {
+      goToPage(2);
+    }
+  }
+  
+  function saveConfigAndGoToCalendar() {
+    const config = {
+      timezone: document.getElementById('timezone').value,
+      startDate: document.getElementById('start-date').value,
+      endDate: document.getElementById('end-date').value,
+      daysOfWeek: Array.from(document.querySelectorAll('input[type=checkbox]:checked')).map(cb => parseInt(cb.value)),
+      hoursRange: [document.getElementById('start-hour').value, document.getElementById('end-hour').value],
+      slotStep: parseInt(document.getElementById('slot-step').value)
+    };
+    db.ref(`meetings/${meetingName}/config`).set(config).then(() => {
+      goToPage(3);
+      renderCalendar(config);
+    });
+  }
+  
+  Intl.supportedValuesOf('timeZone').forEach(tz => {
+    const opt = document.createElement('option');
+    opt.value = opt.text = tz;
+    document.getElementById('timezone').appendChild(opt);
+  });
+  document.getElementById('timezone').value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
+  function renderCalendar(config) {
+    document.getElementById('meeting-details').innerText = JSON.stringify(config, null, 2);
+    const calendarEl = document.getElementById('calendar');
+    calendarEl.innerHTML = "";
+    if (calendar) calendar.destroy();
+    calendar = new FullCalendar.Calendar(calendarEl, {
+      timeZone: config.timezone,
+      initialView: 'timeGridWeek',
+      slotMinTime: config.hoursRange[0],
+      slotMaxTime: config.hoursRange[1],
+      selectable: true,
+      editable: true,
+      headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' },
+      select: function(info) {
+        calendar.addEvent({
+          title: userName,
+          start: info.start,
+          end: info.end,
+          backgroundColor: userColor,
+          borderColor: userColor
+        });
+        saveUserAvailability();
+      },
+      eventClick: function(info) {
+        if (info.event.title === userName) {
+          info.event.remove();
+          saveUserAvailability();
+        }
+      }
+    });
+    calendar.render();
+    loadAvailabilityAndLegend();
+  }
+  
+  function saveUserAvailability() {
+    const events = calendar.getEvents().filter(e => e.title === userName);
+    const payload = events.map(e => ({ start: e.start.toISOString(), end: e.end.toISOString() }));
+    db.ref(`meetings/${meetingName}/users/${userName}`).set(payload);
+  }
+  
+  async function loadAvailabilityAndLegend() {
+    const snap = await db.ref(`meetings/${meetingName}/users`).once('value');
+    const data = snap.val() || {};
+    const legend = document.getElementById('legend');
+    const summary = document.getElementById('summary');
+    legend.innerHTML = '<h4>Legenda utenti</h4>';
+    summary.innerHTML = '<h4>Disponibilità utenti</h4>';
+    let index = 0;
+    Object.keys(data).forEach(user => {
+      const color = `hsl(${index * 60}, 70%, 60%)`;
+      if (user !== userName) {
+        data[user].forEach(e => {
+          calendar.addEvent({ title: user, start: e.start, end: e.end, backgroundColor: color, borderColor: color });
+        });
+      }
+      legend.innerHTML += `<div style='margin:4px'><span style='display:inline-block;width:12px;height:12px;background:${color};margin-right:6px'></span>${user}</div>`;
+      summary.innerHTML += `<div><strong>${user}</strong>: ${data[user].length} slot</div>`;
+      index++;
+    });
+  }
+  
+  </script>
+  

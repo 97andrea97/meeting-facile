@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <title>meeting-facile</title>
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+    .layout {
+      display: flex;
+      flex-direction: row;
+      gap: 40px;
+      align-items: flex-start;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    #calendar {
+      flex: 2;
+      min-width: 700px;
+      max-width: 1000px;
+    }
+    #sidebar, #options {
+      flex: 1;
+      min-width: 250px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .legend-color {
+      width: 18px;
+      height: 18px;
+      margin-right: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    input, button, select {
+      font-size: 16px;
+      padding: 8px;
+      width: 100%;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    #calendar-section {
+      display: none;
+    }
+    #current-info {
+      font-size: 20px;
+      margin-bottom: 10px;
+      font-weight: bold;
+      text-align: center;
+    }
+    #availability-summary {
+      background: #f8f9fa;
+      padding: 10px;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    #submit-btn {
+      background-color: #28a745;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 10px;
+      margin-bottom: 10px;
+      width: 100%;
+      cursor: pointer;
+    }
+    .user-filter {
+      margin-top: 10px;
+    }
+    @media (max-width: 900px) {
+      .layout {
+        flex-direction: column;
+        align-items: center;
+      }
+      #calendar {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center;">meeting-facile</h1>
+
+  <div class="layout">
+    <div id="calendar-section">
+      <div id="current-info"></div>
+      <div id="options">
+        <button id="submit-btn">Salva disponibilità</button>
+        <div id="availability-summary"></div>
+        <label for="start-hour">Ora inizio:</label>
+        <input type="time" id="start-hour" value="08:00">
+        <label for="end-hour">Ora fine:</label>
+        <input type="time" id="end-hour" value="22:00">
+        <label for="timezone">Fuso orario:</label>
+        <select id="timezone"></select>
+        <div id="user-legend"></div>
+        <div class="user-filter">
+          <label>Filtra utenti:</label>
+          <div id="user-filters"></div>
+        </div>
+      </div>
+      <div id="calendar"></div>
+    </div>
+    <div id="sidebar">
+      <input id="meeting-name" type="text" placeholder="Nome riunione (es. team-lunedi)" />
+      <input id="user-name" type="text" placeholder="Il tuo nome" />
+      <button id="start-button">Inizia</button>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMQojwmEfchDlP1Bv0PpIXRTK0V7NZZU",
+      authDomain: "meeting-felice.firebaseapp.com",
+      databaseURL: "https://meeting-felice-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "meeting-felice",
+      storageBucket: "meeting-felice.appspot.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function saveAvailability(meetingName, userName, events) {
+      const updates = {};
+      updates[`meetings/${meetingName}/${userName}`] = events.map(e => ({
+        start: e.start.toISOString(),
+        end: e.end.toISOString()
+      }));
+      return db.ref().update(updates);
+    }
+
+    function fetchAllAvailability(meetingName) {
+      return db.ref(`meetings/${meetingName}`).once('value')
+        .then(snapshot => snapshot.val() || {});
+    }
+  </script>
+
+  <script>
+    let calendar, userName, meetingName;
+
+    document.getElementById('start-button').addEventListener('click', async () => {
+      meetingName = document.getElementById('meeting-name').value.trim();
+      userName = document.getElementById('user-name').value.trim();
+
+      if (!meetingName || !userName) {
+        alert("Per favore inserisci nome riunione e il tuo nome.");
+        return;
+      }
+
+      document.getElementById('calendar-section').style.display = 'block';
+      document.getElementById('current-info').innerHTML = `Riunione: <b>${meetingName}</b>, Utente: <b>${userName}</b> <button onclick="location.reload()">Cambia</button>`;
+
+      const timezoneSelect = document.getElementById('timezone');
+      Intl.supportedValuesOf('timeZone').forEach(tz => {
+        const option = document.createElement('option');
+        option.value = option.text = tz;
+        timezoneSelect.appendChild(option);
+      });
+      timezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+      const allData = await fetchAllAvailability(meetingName);
+      const userColors = {};
+      const colors = ['#007bff', '#28a745', '#dc3545', '#ffc107', '#6f42c1', '#20c997', '#fd7e14'];
+      const userList = Object.keys(allData);
+
+      userList.forEach((user, index) => userColors[user] = colors[index % colors.length]);
+      const events = userList.flatMap(user => allData[user].map(ev => ({
+        start: ev.start,
+        end: ev.end,
+        title: user === userName ? "Tu" : user,
+        backgroundColor: userColors[user],
+        borderColor: userColors[user],
+        display: 'auto'
+      })));
+
+      const calendarEl = document.getElementById('calendar');
+      const startHour = document.getElementById('start-hour').value;
+      const endHour = document.getElementById('end-hour').value;
+
+      if (calendar) calendar.destroy();
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        timeZone: timezoneSelect.value,
+        initialView: 'timeGridWeek',
+        selectable: true,
+        editable: true,
+        slotMinTime: startHour,
+        slotMaxTime: endHour,
+        height: "auto",
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'timeGridWeek,timeGridDay'
+        },
+        events: events,
+        select: function(info) {
+          const event = {
+            title: "Tu",
+            start: info.start,
+            end: info.end,
+            backgroundColor: userColors[userName] || '#17a2b8',
+            borderColor: userColors[userName] || '#17a2b8'
+          };
+          calendar.addEvent(event);
+          updateAvailabilitySummary();
+        },
+        eventClick: function(info) {
+          if (info.event.title === "Tu") {
+            info.event.remove();
+            updateAvailabilitySummary();
+          }
+        }
+      });
+
+      calendar.render();
+      updateAvailabilitySummary();
+      renderLegend(userColors);
+      renderUserFilters(userList);
+    });
+
+    document.getElementById('submit-btn').addEventListener('click', () => {
+      const userEvents = calendar.getEvents()
+        .filter(e => e.title === "Tu")
+        .map(e => ({ start: e.start, end: e.end }));
+      saveAvailability(meetingName, userName, userEvents).then(() => {
+        alert("Disponibilità salvata!");
+      });
+    });
+
+    function updateAvailabilitySummary() {
+      const container = document.getElementById('availability-summary');
+      const slots = calendar.getEvents()
+        .filter(e => e.title === "Tu")
+        .map(e => `${e.start.toLocaleString()} - ${e.end.toLocaleString()}`);
+      container.innerHTML = '<b>Slot selezionati:</b><br>' + slots.join('<br>');
+    }
+
+    function renderLegend(userColors) {
+      const legend = document.getElementById('user-legend');
+      legend.innerHTML = '<b>Legenda:</b><br>' + Object.entries(userColors).map(([user, color]) => (
+        `<div class="legend-item"><div class="legend-color" style="background:${color}"></div>${user}</div>`
+      )).join('');
+    }
+
+    function renderUserFilters(users) {
+      const filtersDiv = document.getElementById('user-filters');
+      filtersDiv.innerHTML = '';
+      users.forEach(user => {
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `filter-${user}`;
+        checkbox.checked = true;
+        checkbox.addEventListener('change', () => {
+          calendar.getEvents().forEach(event => {
+            if (event.title === user || (user === userName && event.title === "Tu")) {
+              event.setProp('display', checkbox.checked ? 'auto' : 'none');
+            }
+          });
+        });
+        const label = document.createElement('label');
+        label.htmlFor = `filter-${user}`;
+        label.innerText = user;
+        filtersDiv.appendChild(checkbox);
+        filtersDiv.appendChild(label);
+        filtersDiv.appendChild(document.createElement('br'));
+      });
+    }
+  </script>
+</body>
+</html>
