@@ -3,6 +3,7 @@ const meetingRef = db.ref(`availability/${meetingName}`);
 const settingsRef = db.ref(`settings/${meetingName}`);
 
 let calendar;
+let selectedUsers = new Set();
 const userColors = {};
 const predefinedColors = ["#f28b82", "#fbbc04", "#ccff90", "#a7ffeb", "#cbf0f8", "#aecbfa", "#d7aefb", "#fdcfe8"];
 
@@ -49,6 +50,23 @@ function createCalendar(settings) {
   calendar.render();
 }
 
+function loadUserAvailability() {
+  userRef.once("value", snapshot => {
+    const userData = snapshot.val();
+    if (!userData) return;
+    userData.forEach(slot => {
+      calendar.addEvent({
+        title: username,
+        start: slot.start,
+        end: slot.end,
+        backgroundColor: getUserColor(username),
+        editable: true,
+        display: 'auto'
+      });
+    });
+  });
+}
+
 function saveAvailabilityAndUpdate() {
   const events = calendar.getEvents()
     .filter(ev => ev.title === username)
@@ -58,6 +76,9 @@ function saveAvailabilityAndUpdate() {
     }));
 
   userRef.set(events);
+
+  const merged = mergeSlots(events);
+  showSummary("personal-summary", merged, "slot");
 
   setTimeout(() => {
     updateSummaries();
@@ -74,54 +95,52 @@ function saveAvailability() {
 
   userRef.set(events);
 
-  // Aggiorna subito il riepilogo personale
   const merged = mergeSlots(events);
   showSummary("personal-summary", merged, "slot");
 }
+
 function updateSummaries() {
-    meetingRef.once("value", snapshot => {
-      const allData = snapshot.val();
-      const mergedByUser = {};
-  
-      for (let user in allData) {
-        mergedByUser[user] = mergeSlots(allData[user]);
-      }
-  
-      const allMerged = Object.values(mergedByUser);
-      const common = findCommonSlots(allMerged);
-  
-      showSummary("common-summary", common, "common-slot");
-      showSummary("personal-summary", mergedByUser[username] || [], "slot");
-      showAllUserSummaries(mergedByUser);
-      showLegend(Object.keys(mergedByUser));
-  
-      const commonButton = document.getElementById("refreshCommonBtn");
-      if (commonButton) commonButton.disabled = false;
-  
-      // Rimuovi SOLO eventi degli altri utenti
-      calendar.getEvents().forEach(ev => {
-        if (ev.title !== username) ev.remove();
-      });
-  
-      // Aggiungi eventi SOLO degli altri utenti
-      for (let user in mergedByUser) {
-        if (user === username) continue;
+  meetingRef.once("value", snapshot => {
+    const allData = snapshot.val();
+    const mergedByUser = {};
+
+    for (let user in allData) {
+      mergedByUser[user] = mergeSlots(allData[user]);
+    }
+
+    const allMerged = Object.values(mergedByUser);
+    const common = findCommonSlots(allMerged);
+
+    showSummary("common-summary", common, "common-slot");
+    showSummary("personal-summary", mergedByUser[username] || [], "slot");
+    showAllUserSummaries(mergedByUser);
+    showLegend(Object.keys(mergedByUser));
+
+    const commonButton = document.getElementById("refreshCommonBtn");
+    if (commonButton) commonButton.disabled = false;
+
+    calendar.getEvents().forEach(ev => {
+      if (ev.title !== username) ev.remove();
+    });
+
+    for (let user in mergedByUser) {
+      if (user === username || selectedUsers.has(user)) {
         const color = getUserColor(user);
         mergedByUser[user].forEach(slot => {
           calendar.addEvent({
             title: user,
             start: slot.start,
             end: slot.end,
-            editable: false,
+            editable: user === username,
             backgroundColor: color,
-            display: 'background'
+            display: user === username ? 'auto' : 'background'
           });
         });
       }
-    });
-  }
-  
-  
+    }
+  });
+}
+
 function showAllUserSummaries(mergedByUser) {
   const container = document.getElementById("all-users-summary");
   if (!container) return;
@@ -134,10 +153,10 @@ function showAllUserSummaries(mergedByUser) {
   const formatterTime = new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" });
 
   for (let user in mergedByUser) {
-    if (user === username) continue;
     const color = getUserColor(user);
+    const isSelected = selectedUsers.has(user) || user === username;
     const userDiv = document.createElement("div");
-    userDiv.innerHTML = `<strong style="color:${color}">${user}</strong>`;
+    userDiv.innerHTML = `<label><input type="checkbox" class="user-toggle" data-user="${user}" ${isSelected ? 'checked' : ''}/> <strong style="color:${color}">${user}</strong></label>`;
 
     mergedByUser[user].forEach(slot => {
       const start = new Date(slot.start);
@@ -156,6 +175,18 @@ function showAllUserSummaries(mergedByUser) {
     container.appendChild(userDiv);
     container.appendChild(document.createElement("hr"));
   }
+
+  document.querySelectorAll(".user-toggle").forEach(input => {
+    input.addEventListener("change", () => {
+      const user = input.dataset.user;
+      if (input.checked) {
+        selectedUsers.add(user);
+      } else {
+        selectedUsers.delete(user);
+      }
+      updateSummaries();
+    });
+  });
 }
 
 function showLegend(userList) {
@@ -238,6 +269,7 @@ settingsRef.once("value", snap => {
     window.location.href = "setup_meeting.html";
   } else {
     createCalendar(settings);
+    loadUserAvailability();
     updateSummaries();
   }
 });
@@ -249,6 +281,13 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.removeItem("meetingName");
       localStorage.removeItem("username");
       window.location.href = "index.html";
+    });
+  }
+
+  const syncBtn = document.getElementById("syncBtn");
+  if (syncBtn) {
+    syncBtn.addEventListener("click", () => {
+      updateSummaries();
     });
   }
 });
