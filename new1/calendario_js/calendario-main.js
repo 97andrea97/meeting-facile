@@ -119,12 +119,27 @@ function updateSummaries() {
     const commonButton = document.getElementById("refreshCommonBtn");
     if (commonButton) commonButton.disabled = false;
 
-    calendar.getEvents().forEach(ev => {
-      if (ev.title !== username) ev.remove();
+    // Rimuove solo gli eventi degli utenti non più selezionati
+    const existingEvents = calendar.getEvents();
+    const existingUserEvents = {};
+    existingEvents.forEach(ev => {
+      if (ev.title !== username) {
+        if (!existingUserEvents[ev.title]) existingUserEvents[ev.title] = [];
+        existingUserEvents[ev.title].push(ev);
+      }
     });
+
+    // Rimuovi eventi non selezionati
+    for (let user in existingUserEvents) {
+      if (!selectedUsers.has(user)) {
+        existingUserEvents[user].forEach(ev => ev.remove());
+      }
+    }
 
     for (let user in mergedByUser) {
       if (user === username || selectedUsers.has(user)) {
+        const alreadyExists = calendar.getEvents().some(ev => ev.title === user);
+        if (alreadyExists) continue;
         const color = getUserColor(user);
         mergedByUser[user].forEach(slot => {
           calendar.addEvent({
@@ -147,12 +162,28 @@ function showAllUserSummaries(mergedByUser) {
   container.innerHTML = "";
   const title = document.createElement("h3");
   title.textContent = "Disponibilità per utente";
+
+  const toggleAllBtn = document.createElement("button");
+  toggleAllBtn.textContent = "Seleziona/Deseleziona tutti";
+  toggleAllBtn.style.marginBottom = "10px";
+  toggleAllBtn.addEventListener("click", () => {
+    const allChecked = Object.keys(mergedByUser).every(user => selectedUsers.has(user) || user === username);
+    selectedUsers.clear();
+    if (!allChecked) {
+      Object.keys(mergedByUser).forEach(user => {
+        if (user !== username) selectedUsers.add(user);
+      });
+    }
+    updateSummaries();
+  });
+  container.appendChild(toggleAllBtn);
   container.appendChild(title);
 
   const formatterDay = new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "numeric", month: "short" });
   const formatterTime = new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" });
 
   for (let user in mergedByUser) {
+    if (user !== username) selectedUsers.add(user);
     const color = getUserColor(user);
     const isSelected = selectedUsers.has(user) || user === username;
     const userDiv = document.createElement("div");
@@ -263,6 +294,7 @@ function showSummary(containerId, slots, className) {
 }
 
 settingsRef.once("value", snap => {
+  selectedUsers.clear();
   const settings = snap.val();
   if (!settings) {
     alert("Impostazioni mancanti per questo meeting.");
