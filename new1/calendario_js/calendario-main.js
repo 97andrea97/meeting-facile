@@ -15,6 +15,17 @@ function getUserColor(user) {
   return userColors[user];
 }
 
+function clipSlotToRange(slot, settings) {
+    const rangeStart = new Date(settings.startDate);
+    const rangeEnd = new Date(new Date(settings.endDate).getTime() + 24 * 60 * 60 * 1000);
+    const slotStart = new Date(slot.start);
+    const slotEnd = new Date(slot.end);
+    const clippedStart = slotStart < rangeStart ? rangeStart : slotStart;
+    const clippedEnd = slotEnd > rangeEnd ? rangeEnd : slotEnd;
+    if (clippedStart >= clippedEnd) return null;
+    return { start: clippedStart.toISOString(), end: clippedEnd.toISOString() };
+  }
+
 function createCalendar(settings) {
     const calendarEl = document.getElementById("calendar");
   
@@ -67,110 +78,108 @@ function createCalendar(settings) {
   
 
 function loadUserAvailability() {
-  userRef.once("value", snapshot => {
-    const userData = snapshot.val();
-    if (!userData) return;
-    userData.forEach(slot => {
-      calendar.addEvent({
-        title: username,
-        start: slot.start,
-        end: slot.end,
-        backgroundColor: getUserColor(username),
-        editable: true,
-        display: 'auto'
+  settingsRef.once("value", snap => {
+    const settings = snap.val();
+    if (!settings) return;
+    userRef.once("value", snapshot => {
+      const userData = snapshot.val();
+      if (!userData) return;
+      userData.forEach(slot => {
+        const clipped = clipSlotToRange(slot, settings);
+        if (!clipped) return;
+        calendar.addEvent({
+          title: username,
+          start: clipped.start,
+          end: clipped.end,
+          backgroundColor: getUserColor(username),
+          editable: true,
+          display: 'auto'
+        });
       });
     });
   });
 }
 
-function saveAvailabilityAndUpdate() {
-  const events = calendar.getEvents()
-    .filter(ev => ev.title === username)
-    .map(ev => ({ start: ev.start.toISOString(), end: ev.end.toISOString() }));
 
-  userRef.set(events).then(() => {
-    updateSummaries();
-  });
-}
+function saveAvailabilityAndUpdate() {
+    settingsRef.once("value", snap => {
+      const settings = snap.val();
+      if (!settings) return;
+      const events = calendar.getEvents()
+        .filter(ev => ev.title === username)
+        .map(ev => clipSlotToRange({ start: ev.start.toISOString(), end: ev.end.toISOString() }, settings))
+        .filter(slot => slot !== null);
+      userRef.set(events).then(() => updateSummaries(settings));
+    });
+  }
+  
 
 function saveAvailability() {
-  const events = calendar.getEvents()
-    .filter(ev => ev.title === username)
-    .map(ev => ({ start: ev.start.toISOString(), end: ev.end.toISOString() }));
-
-  userRef.set(events).then(() => {
-    updateSummaries();
-  });
-}
-
-function updateSummaries() {
-  meetingRef.once("value", snapshot => {
-    const allData = snapshot.val() || {};
-    const mergedByUser = {};
-
-    for (let user in allData) {
-      mergedByUser[user] = mergeSlots(allData[user]);
-    }
-
-    if (!(username in mergedByUser)) {
-      mergedByUser[username] = [];
-    }
-
-    const selectedMerged = Object.entries(mergedByUser)
-      .filter(([user]) => selectedUsers.has(user))
-      .map(([_, slots]) => slots);
-
-    const common = findCommonSlots(selectedMerged);
-
-    showSummary("common-summary", common, "common-slot");
-    showSummary("personal-summary", mergedByUser[username] || [], "slot");
-
-    const commonTitle = document.querySelector("#common-summary-title");
-    if (commonTitle) {
-      commonTitle.textContent = "Disponibilità comune utenti selezionati";
-    }
-
-    showAllUserSummaries(mergedByUser, firstSummaryUpdate);
-    firstSummaryUpdate = false;
-
-    showLegend(Object.keys(mergedByUser));
-
-    const commonButton = document.getElementById("refreshCommonBtn");
-    if (commonButton) commonButton.disabled = false;
-
-    const existingEvents = calendar.getEvents();
-    const existingUserEvents = {};
-    existingEvents.forEach(ev => {
-      if (!existingUserEvents[ev.title]) existingUserEvents[ev.title] = [];
-      existingUserEvents[ev.title].push(ev);
+    settingsRef.once("value", snap => {
+        const settings = snap.val();
+        if (!settings) return;
+        const events = calendar.getEvents()
+        .filter(ev => ev.title === username)
+        .map(ev => clipSlotToRange({ start: ev.start.toISOString(), end: ev.end.toISOString() }, settings))
+        .filter(slot => slot !== null);
+        userRef.set(events).then(() => updateSummaries(settings));
     });
-
-    for (let user in existingUserEvents) {
-      if (!selectedUsers.has(user)) {
-        existingUserEvents[user].forEach(ev => ev.remove());
-      }
-    }
-
-    for (let user in mergedByUser) {
-      if (selectedUsers.has(user)) {
-        const alreadyExists = calendar.getEvents().some(ev => ev.title === user);
-        if (alreadyExists) continue;
-        const color = getUserColor(user);
-        mergedByUser[user].forEach(slot => {
-          calendar.addEvent({
-            title: user,
-            start: slot.start,
-            end: slot.end,
-            editable: user === username,
-            backgroundColor: color,
-            display: user === username ? 'auto' : 'background'
-          });
-        });
-      }
-    }
-  });
 }
 
+function updateSummaries(settings) {
+    meetingRef.once("value", snapshot => {
+      const allData = snapshot.val() || {};
+      const mergedByUser = {};
+      for (let user in allData) {
+        const clippedSlots = allData[user]
+          .map(slot => clipSlotToRange(slot, settings))
+          .filter(slot => slot !== null);
+        mergedByUser[user] = mergeSlots(clippedSlots);
+      }
+      if (!(username in mergedByUser)) mergedByUser[username] = [];
+      const selectedMerged = Object.entries(mergedByUser)
+        .filter(([user]) => selectedUsers.has(user))
+        .map(([_, slots]) => slots);
+      const common = findCommonSlots(selectedMerged);
+      showSummary("common-summary", common, "common-slot");
+      showSummary("personal-summary", mergedByUser[username] || [], "slot");
+      const commonTitle = document.querySelector("#common-summary-title");
+      if (commonTitle) commonTitle.textContent = "Disponibilità comune utenti selezionati";
+      showAllUserSummaries(mergedByUser, firstSummaryUpdate);
+      firstSummaryUpdate = false;
+      const commonButton = document.getElementById("refreshCommonBtn");
+      if (commonButton) commonButton.disabled = false;
+      const existingEvents = calendar.getEvents();
+      const existingUserEvents = {};
+      existingEvents.forEach(ev => {
+        if (!existingUserEvents[ev.title]) existingUserEvents[ev.title] = [];
+        existingUserEvents[ev.title].push(ev);
+      });
+      for (let user in existingUserEvents) {
+        if (!selectedUsers.has(user)) {
+          existingUserEvents[user].forEach(ev => ev.remove());
+        }
+      }
+      for (let user in mergedByUser) {
+        if (selectedUsers.has(user)) {
+          const alreadyExists = calendar.getEvents().some(ev => ev.title === user);
+          if (alreadyExists) continue;
+          const color = getUserColor(user);
+          mergedByUser[user].forEach(slot => {
+            calendar.addEvent({
+              title: user,
+              start: slot.start,
+              end: slot.end,
+              editable: user === username,
+              backgroundColor: color,
+              display: user === username ? 'auto' : 'background'
+            });
+          });
+        }
+      }
+    });
+  }
+  
 function showAllUserSummaries(mergedByUser, firstLoad = false) {
   const container = document.getElementById("all-users-summary");
   if (!container) return;
