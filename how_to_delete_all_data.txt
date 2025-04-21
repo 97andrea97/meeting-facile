@@ -1,0 +1,15 @@
+Open your site (e.g., index.html)
+
+Press F12 to open DevTools
+
+Go to the Console tab
+
+Paste the code above and press Enter
+
+db.ref("availability").remove()
+  .then(() => console.log("✅ All availability entries removed"))
+  .catch(err => console.error("❌ Error removing availability:", err));
+
+db.ref("settings").remove()
+  .then(() => console.log("✅ All settings entries removed"))
+  .catch(err => console.error("❌ Error removing settings:", err));

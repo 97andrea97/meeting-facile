@@ -65,16 +65,27 @@
       text-decoration: underline;
       color: #007bff;
     }
+
+    .info-box {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+
+    .info-box span {
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <h1>Impostazioni calendario</h1>
 
-  <label for="meetingName">Nome del meeting:</label>
-  <input type="text" id="meetingName" placeholder="es. team-weekly" />
-
-  <label for="username">Il tuo nome utente:</label>
-  <input type="text" id="username" placeholder="es. andrea" />
+  <!-- Meeting info display -->
+  <div class="info-box">
+    <p>Nome del meeting: <span id="meetingDisplay">(caricamento...)</span></p>
+    <p>Nome utente: <span id="usernameDisplay">(caricamento...)</span></p>
+  </div>
 
   <label for="startHour">Ora inizio giornata:</label>
   <input type="time" id="startHour" value="09:00" />
@@ -108,13 +119,13 @@
     <a href="index.html" class="link">🔁 Vedi altri meeting</a>
   </p>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-<!-- Modular scripts -->
-<script src="calendario_js/firebase-config.js"></script>
-<script src="calendario_js/setup-meeting.js"></script>
+  <!-- Modular scripts -->
+  <script src="calendario_js/firebase-config.js"></script>
+  <script src="calendario_js/setup-meeting.js"></script>
 
 </body>
 </html>

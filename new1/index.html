@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Meeting Facile – Inizia</title>f
+  <title>Meeting Facile – Inizia</title>
   <style>
     body {
       font-family: sans-serif;
@@ -14,27 +14,31 @@
       padding: 10px;
       margin: 10px;
     }
+    #meetingActions button {
+      margin: 10px 5px;
+    }
   </style>
 </head>
 <body>
-    <h1>Benvenuto su <em>Meeting Facile</em></h1>
-  
-    <p>Inserisci il nome del meeting:</p>
-    <input type="text" id="meetingName" placeholder="es. progetto-esame" />
-  
-    <p>Inserisci il tuo nome o nickname:</p>
-    <input type="text" id="username" placeholder="es. luca" />
-  
-    <br>
-    <button onclick="checkMeeting()">Continua</button>
-  
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <h1>Benvenuto su <em>Meeting Facile</em></h1>
 
-    <!-- Modular scripts -->
-    <script src="calendario_js/firebase-config.js"></script>
-    <script src="calendario_js/check-meeting.js"></script>
+  <p>Inserisci il nome del meeting:</p>
+  <input type="text" id="meetingName" placeholder="es. progetto-esame" />
 
-  </body>  
+  <p>Inserisci il tuo nome o nickname:</p>
+  <input type="text" id="username" placeholder="es. luca" />
+
+  <br>
+  <button id="createBtn">Crea</button>
+  <button id="joinBtn">Unisciti</button>
+  <p id="statusMessage" style="font-weight: bold;"></p>
+  
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <!-- Modular scripts -->
+  <script src="calendario_js/firebase-config.js"></script>
+  <script src="calendario_js/check-meeting.js"></script>
+</body>
 </html>
