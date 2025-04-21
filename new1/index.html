@@ -31,37 +31,10 @@
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-    <script>
-      const firebaseConfig = {
-        apiKey: "AIzaSyCMQojwmEfchDlP1Bv0PpIXRTK0V7NZZU",
-        authDomain: "meeting-felice.firebaseapp.com",
-        databaseURL: "https://meeting-felice-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "meeting-felice",
-        storageBucket: "meeting-felice.appspot.com"
-      };
-      firebase.initializeApp(firebaseConfig);
-      const db = firebase.database();
-  
-      function checkMeeting() {
-        const meeting = document.getElementById("meetingName").value.trim();
-        const username = document.getElementById("username").value.trim();
-  
-        if (!meeting || !username) {
-          alert("Inserisci sia il nome del meeting che il tuo nickname.");
-          return;
-        }
-  
-        localStorage.setItem("meetingName", meeting);
-        localStorage.setItem("username", username);
-  
-        db.ref(`availability/${meeting}`).once('value', snapshot => {
-          if (snapshot.exists()) {
-            window.location.href = "calendario.html";
-          } else {
-            window.location.href = "setup_meeting.html";
-          }
-        });
-      }
-    </script>
+
+    <!-- Modular scripts -->
+    <script src="calendario_js/firebase-config.js"></script>
+    <script src="calendario_js/check-meeting.js"></script>
+
   </body>  
 </html>

@@ -108,89 +108,13 @@
     <a href="index.html" class="link">🔁 Vedi altri meeting</a>
   </p>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCMQojwmEfchDlP1Bv0PpIXRTK0V7NZZU",
-      authDomain: "meeting-felice.firebaseapp.com",
-      databaseURL: "https://meeting-felice-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "meeting-felice",
-      storageBucket: "meeting-felice.appspot.com"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-    // Pre-fill if stored
-    const storedMeetingName = localStorage.getItem("meetingName");
-    const storedUsername = localStorage.getItem("username");
-    if (storedMeetingName) document.getElementById("meetingName").value = storedMeetingName;
-    if (storedUsername) document.getElementById("username").value = storedUsername;
+<!-- Modular scripts -->
+<script src="calendario_js/firebase-config.js"></script>
+<script src="calendario_js/setup-meeting.js"></script>
 
-    // Default date values
-    const today = new Date().toISOString().split('T')[0];
-    const nextWeek = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    document.getElementById("startDate").value = today;
-    document.getElementById("endDate").value = nextWeek;
-
-    // Toggle weekday buttons
-    document.querySelectorAll(".weekday").forEach(button => {
-      button.addEventListener("click", () => {
-        button.classList.toggle("active");
-      });
-    });
-
-    function saveSettings() {
-      const meetingName = document.getElementById("meetingName").value.trim();
-      const username = document.getElementById("username").value.trim();
-      const startHour = document.getElementById("startHour").value;
-      const endHour = document.getElementById("endHour").value;
-      const minSlot = parseInt(document.getElementById("minSlot").value);
-      const startDate = document.getElementById("startDate").value;
-      const endDate = document.getElementById("endDate").value;
-
-      const weekdays = Array.from(document.querySelectorAll(".weekday.active"))
-        .map(btn => parseInt(btn.dataset.day));
-
-      if (!meetingName || !username) {
-        alert("Inserisci nome del meeting e nome utente.");
-        return;
-      }
-
-      if (weekdays.length === 0) {
-        alert("Seleziona almeno un giorno della settimana.");
-        return;
-      }
-
-      if (new Date(startDate) > new Date(endDate)) {
-        alert("La data di inizio deve essere precedente alla data di fine.");
-        return;
-      }
-
-      // Save to localStorage
-      localStorage.setItem("meetingName", meetingName);
-      localStorage.setItem("username", username);
-
-      const settings = {
-        startHour,
-        endHour,
-        minSlot,
-        weekdays,
-        startDate,
-        endDate
-      };
-
-      db.ref(`settings/${meetingName}`).set(settings)
-        .then(() => {
-          console.log("Impostazioni salvate con successo.");
-          window.location.href = "calendario.html";
-        })
-        .catch((error) => {
-          console.error("Errore durante il salvataggio:", error);
-          alert("Errore durante il salvataggio delle impostazioni.");
-        });
-    }
-  </script>
 </body>
 </html>
