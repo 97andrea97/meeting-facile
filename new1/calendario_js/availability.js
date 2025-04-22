@@ -1,53 +1,45 @@
-// availability.js
+// ✅ availability.js ottimizzato
 // Dependencies: uses firebaseRefs.js, utils.js, calendar.js, summary.js
 
 function loadUserAvailability() {
-  settingsRef.once("value", snap => {
+  settingsRef.once("value").then(snap => {
     const settings = snap.val();
     if (!settings) return;
 
-    userRef.once("value", snapshot => {
+    userRef.once("value").then(snapshot => {
       const userData = snapshot.val();
       if (!userData) return;
 
-      userData.forEach(slot => {
-        const clipped = clipSlotToRange(slot, settings);
-        if (!clipped) return;
-        calendar.addEvent({
+      const events = (Array.isArray(userData) ? userData : Object.values(userData))
+        .map(slot => clipSlotToRange(slot, settings))
+        .filter(Boolean)
+        .map(slot => ({
           title: username,
-          start: clipped.start,
-          end: clipped.end,
+          start: slot.start,
+          end: slot.end,
           backgroundColor: getUserColor(username),
           editable: true,
-          display: 'auto'
-        });
-      });
+          display: "auto"
+        }));
+
+      events.forEach(ev => calendar.addEvent(ev));
     });
   });
 }
 
-// ✅ aggiorna e chiama direttamente updateSummaries
-function saveAvailabilityAndUpdate() {
-  return settingsRef.once("value").then(snap => {
-    const settings = snap.val();
-    if (!settings) return;
-    const events = calendar.getEvents()
-      .filter(ev => ev.title === username)
-      .map(ev => clipSlotToRange({ start: ev.start.toISOString(), end: ev.end.toISOString() }, settings))
-      .filter(slot => slot !== null);
-    return userRef.set(events).then(() => updateSummaries(settings));
-  });
-}
-
-// ✅ versione Promise-friendly, senza chiamare direttamente updateSummaries
 function saveAvailability() {
   return settingsRef.once("value").then(snap => {
     const settings = snap.val();
     if (!settings) return;
+
     const events = calendar.getEvents()
       .filter(ev => ev.title === username)
-      .map(ev => clipSlotToRange({ start: ev.start.toISOString(), end: ev.end.toISOString() }, settings))
-      .filter(slot => slot !== null);
+      .map(ev => clipSlotToRange({
+        start: ev.start.toISOString(),
+        end: ev.end.toISOString()
+      }, settings))
+      .filter(Boolean);
+
     return userRef.set(events);
   });
 }
