@@ -29,7 +29,7 @@ function createCalendar(settings) {
 
       settingsRef.once("value", snap => {
         const settingsNow = snap.val();
-        if (settingsNow) updateSummaries(settingsNow, true);
+        if (settingsNow) updateSummaries(settingsNow, false); // don't force current user
       });
     }
 
@@ -70,4 +70,14 @@ function createCalendar(settings) {
     });
 
     calendar.render();
+
+    // Rimuove gli eventi degli utenti non selezionati ogni volta che si aggiorna la disponibilità
+    setInterval(() => {
+      const events = calendar.getEvents();
+      events.forEach(ev => {
+        if (!selectedUsers.has(ev.title)) {
+          ev.remove();
+        }
+      });
+    }, 1000);
 }
