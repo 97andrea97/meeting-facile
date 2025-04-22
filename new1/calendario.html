@@ -148,8 +148,19 @@
   <script src="calendario_js/calendar.js"></script>
   <script src="calendario_js/availability.js"></script>
   <script src="calendario_js/summary.js"></script>
-  <script src="calendario_js/legend.js"></script>
   <script src="calendario_js/init.js"></script>
+
+  <!-- Attiva il pulsante Impostazioni -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const settingsBtn = document.getElementById("settingsBtn");
+      if (settingsBtn) {
+        settingsBtn.addEventListener("click", () => {
+          window.location.href = "setup_meeting.html";
+        });
+      }
+    });
+  </script>
 
 </body>
 </html>

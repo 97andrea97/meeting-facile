@@ -5,34 +5,97 @@
   <title>Meeting Facile – Inizia</title>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f3f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      padding: 40px;
+      max-width: 400px;
+      width: 90%;
       text-align: center;
-      padding-top: 100px;
     }
-    input, button {
-      font-size: 18px;
-      padding: 10px;
-      margin: 10px;
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 30px;
+      color: #333;
     }
-    #meetingActions button {
-      margin: 10px 5px;
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 12px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 12px 20px;
+      margin: 10px 8px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    #createBtn {
+      background-color: #28a745;
+      color: white;
+    }
+
+    #createBtn:hover {
+      background-color: #218838;
+    }
+
+    #joinBtn {
+      background-color: #007bff;
+      color: white;
+    }
+
+    #joinBtn:hover {
+      background-color: #0069d9;
+    }
+
+    #statusMessage {
+      margin-top: 20px;
+      font-weight: bold;
+      font-size: 15px;
+    }
+
+    @media (max-width: 500px) {
+      h1 {
+        font-size: 22px;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Benvenuto su <em>Meeting Facile</em></h1>
+  <div class="container">
+    <h1>Benvenuto su <em>Meeting Facile</em></h1>
 
-  <p>Inserisci il nome del meeting:</p>
-  <input type="text" id="meetingName" placeholder="es. progetto-esame" />
+    <input type="text" id="meetingName" placeholder="Nome del meeting (es. progetto-esame)" />
+    <input type="text" id="username" placeholder="Il tuo nome o nickname (es. luca)" />
 
-  <p>Inserisci il tuo nome o nickname:</p>
-  <input type="text" id="username" placeholder="es. luca" />
+    <div>
+      <button id="createBtn">Crea</button>
+      <button id="joinBtn">Unisciti</button>
+    </div>
 
-  <br>
-  <button id="createBtn">Crea</button>
-  <button id="joinBtn">Unisciti</button>
-  <p id="statusMessage" style="font-weight: bold;"></p>
-  
+    <p id="statusMessage"></p>
+  </div>
+
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
