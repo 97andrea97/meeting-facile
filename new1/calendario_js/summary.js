@@ -1,4 +1,4 @@
-// ✅ summary.js aggiornato e ottimizzato
+// ✅ summary.js aggiornato e corretto per mantenere l'utente nella lista anche se deselezionato
 let firstSummaryUpdate = true;
 let cachedUserSlots = [];
 
@@ -61,11 +61,8 @@ function proceedWithSummaries(settings) {
       );
     }
 
-    if (selectedUsers.has(username)) {
-      mergedByUser[username] = cachedUserSlots;
-    } else {
-      delete mergedByUser[username];
-    }
+    // ✅ Mantieni sempre lo user corrente anche se non selezionato
+    mergedByUser[username] = cachedUserSlots;
 
     if (firstSummaryUpdate) {
       Object.keys(mergedByUser).forEach(user => selectedUsers.add(user));
@@ -91,20 +88,16 @@ function proceedWithSummaries(settings) {
     renderUserToggles(mergedByUser, settings);
 
     firstSummaryUpdate = false;
-    
+
     if (typeof renderUserEvents === "function") {
       renderUserEvents(mergedByUser);
     }
   });
 }
 
-
-
-
 function renderUserToggles(mergedByUser, settings) {
   const container = document.getElementById("all-users-summary");
   if (!container) return;
-
   container.innerHTML = "";
 
   const toggleAllBtn = document.createElement("button");
@@ -117,17 +110,15 @@ function renderUserToggles(mergedByUser, settings) {
     localStorage.setItem("selectedUsers", JSON.stringify([...selectedUsers]));
     updateSummaries(settings);
   });
-
   container.appendChild(toggleAllBtn);
 
   for (let user in mergedByUser) {
     const color = getUserColor(user);
     const isSelected = selectedUsers.has(user);
-
     const label = document.createElement("label");
     label.innerHTML = `
       <input type="checkbox" class="user-toggle" data-user="${user}" ${isSelected ? "checked" : ""} />
-      <strong style="color:${color}">${user}</strong>
+      <strong style="color:${color}">${user === username ? "⭐ " : ""}${user}</strong>
     `;
 
     const userDiv = document.createElement("div");

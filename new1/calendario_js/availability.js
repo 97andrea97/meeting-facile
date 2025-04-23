@@ -43,3 +43,35 @@ function saveAvailability() {
     return userRef.set(events);
   });
 }
+
+// ✅ Patch for calendar display control
+function renderUserEvents(mergedByUser) {
+  calendar.getEvents().forEach(ev => {
+    if (ev.title !== username && ev.title !== "Comune") ev.remove();
+    if (ev.title === username && !selectedUsers.has(username)) ev.remove();
+  });
+
+  for (let user in mergedByUser) {
+    const showInCalendar = selectedUsers.has(user);
+    const isCurrentUser = user === username;
+    const color = getUserColor(user);
+    const slots = mergedByUser[user] || [];
+
+    if (!showInCalendar && !isCurrentUser) continue;
+
+    if (showInCalendar || isCurrentUser) {
+      if (!showInCalendar && isCurrentUser) continue; // Don't add own slots if unselected
+
+      slots.forEach(slot => {
+        calendar.addEvent({
+          title: user,
+          start: slot.start,
+          end: slot.end,
+          backgroundColor: color,
+          editable: isCurrentUser,
+          display: isCurrentUser ? "auto" : "background"
+        });
+      });
+    }
+  }
+}
