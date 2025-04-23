@@ -90,6 +90,9 @@ function proceedWithSummaries(settings) {
     firstSummaryUpdate = false;
 
     if (typeof renderUserEvents === "function") {
+      calendar.getEvents().forEach(ev => {
+        if (ev.title !== "Comune") ev.remove();
+      });
       renderUserEvents(mergedByUser);
     }
   });
